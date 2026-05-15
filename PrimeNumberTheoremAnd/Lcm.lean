@@ -1,5 +1,7 @@
 import Architect
+import Mathlib.NumberTheory.Chebyshev
 import PrimeNumberTheoremAnd.SecondarySummary
+import PrimeNumberTheoremAnd.Mathlib.NumberTheory.Chebyshev
 
 namespace Lcm
 
@@ -321,7 +323,7 @@ theorem Criterion.q_not_dvd_L' (c : Criterion) : ∀ i, ¬(c.q i ∣ c.L') := by
   have pow_dvd_lcm_iff (a b k : ℕ) (ha : a ≠ 0) (hb : b ≠ 0) :
       p ^ k ∣ Nat.lcm a b ↔ (p ^ k ∣ a ∨ p ^ k ∣ b) := by
     refine ⟨?_, by grind [dvd_trans, Nat.dvd_lcm_left, Nat.dvd_lcm_right]⟩
-    grind [Prime.pow_dvd_iff_le_factorization, lcm_ne_zero, factorization_lcm, Finsupp.sup_apply]
+    grind [Prime.pow_dvd_iff_le_factorization, lcm_ne_zero, Nat.factorization_lcm, Finsupp.sup_apply]
 
   -- 2) prime power divides finset-lcm -> appears in some member
   have exists_mem_of_pow_dvd_finset_lcm (s : Finset ℕ) (hs_nz : ∀ x ∈ s, x ≠ 0) (k)
@@ -381,8 +383,8 @@ theorem Criterion.σnorm_ln_eq (c : Criterion) :
   have hcopL' : ∀ i, (c.q i).Coprime c.L' := fun i ↦
     (c.hq i).coprime_iff_not_dvd.mpr (c.q_not_dvd_L' i)
   have hσ_prime : ∀ i, sigma 1 (c.q i) = 1 + c.q i := fun i ↦ by
-    rw [← pow_one (c.q i), sigma_one_apply_prime_pow (c.hq i), sum_range_succ, range_one,
-      sum_singleton, pow_zero, pow_one]
+    rw [← pow_one (c.q i), sigma_one_apply_prime_pow (c.hq i)]
+    simp [reduceAdd, geom_sum_two, pow_one, add_comm]
   simp only [σnorm, σ, c.L_eq_prod_q_mul_L', Fin.prod_univ_three]
   rw [show c.q 0 * c.q 1 * c.q 2 * c.L' = (c.q 0 * c.q 1 * c.q 2) * c.L' by ring,
       isMultiplicative_sigma.map_mul_of_coprime (coprime_mul_iff_left.mpr
@@ -1075,11 +1077,11 @@ theorem exists_p_primes {n : ℕ} (hn : n ≥ X₀ ^ 2) :
   \]
   for \(i = 1,2,3\), and \(q_1 < q_2 < q_3 < n\).
   -/)
-  (proof := /-- Apply Theorem~\ref{thm:Dusart} with suitable values of \(x\) slightly below \(n\),
+  (proof := /-- Apply Theorem~\ref{Dusart_prop_5_4} with suitable values of \(x\) slightly below \(n\),
   e.g.\ \(x = n(1+1/\log^3\sqrt{n})^{-i}\), again keeping track of the intervals.  For \(n\) large
   enough, these intervals lie in \((\sqrt{n},n)\) and contain primes \(q_i\) with the desired
   ordering. -/)
-  (proofUses := ["thm:Dusart"])
+  (proofUses := ["Dusart_prop_5_4"])
   (latexEnv := "lemma")]
 theorem exists_q_primes {n : ℕ} (hn : n ≥ X₀ ^ 2) :
     ∃ q : Fin 3 → ℕ, (∀ i, Nat.Prime (q i)) ∧ StrictMono q ∧
@@ -1665,5 +1667,44 @@ blueprint_comment /--
   (proofUses := ["prop:ineq-holds-large-n", "thm:criterion"])]
 theorem L_not_HA_of_ge (n : ℕ) (hn : n ≥ 89693 ^ 2) : ¬HighlyAbundant (L n) :=
   (Criterion.mk' hn).not_highlyAbundant
+
+blueprint_comment /--
+\subsection{Bonus material}
+
+The following result is not needed for this application, but is worth recording nevertheless.
+-/
+
+@[blueprint
+  "thm:lcm-eq"
+  (title := "Formula for log of L equals Chebyshev psi")
+  (statement := /-- For every $n$, $\log L_n = \sum_{p \leq n} \lfloor \log n / \log p \rfloor \log p$. -/)
+  (proof := /-- Compute the number of times $p$ divides $L_n$ and use the fundamental theorem of arithmetic. -/)
+  (latexEnv := "sublemma")]
+theorem L_eq_prod (n : ℕ) :
+    L n = ∏ p ∈ Finset.filter Nat.Prime (Finset.range (n + 1)),
+      p ^ ⌊Real.log n / Real.log p⌋₊ := Chebyshev.lcmUpto_eq_prod_pow_floor n
+
+@[blueprint
+  "thm:psi-eq"
+  (title := "Formula for Chebyshev psi")
+  (statement := /-- For every $n$, $\psi(n) = \sum_{p \leq n} \lfloor \log n / \log p \rfloor \log p$, where $\psi$ is the Chebyshev psi function. -/)
+  (proof := /-- Compute the number of times $p$ divides $L_n$ and use the fundamental theorem of arithmetic. -/)
+  (latexEnv := "sublemma")]
+theorem psi_eq_prod (n : ℕ) :
+    Chebyshev.psi n = ∑ p ∈ Finset.filter Nat.Prime (Finset.range (n + 1)),
+      ⌊Real.log n / Real.log p⌋₊ * Real.log p := by
+      convert Chebyshev.psi_eq_sum_mul_log_prime n
+      rw [←natFloor_logb_natCast, ←log_div_log]
+
+@[blueprint
+  "thm:lcm-psi"
+  (title := "Log of L equals Chebyshev psi")
+  (statement := /-- For every $n$, $\log L_n = \psi(n)$, where $\psi$ is the Chebyshev psi function. -/)
+  (proof := /-- Combine the previous results. -/)
+  (latexEnv := "proposition")]
+theorem log_L_eq_psi (n : ℕ) : Real.log (L n) = Chebyshev.psi n := by
+  rw [Chebyshev.psi_eq_log_lcmUpto n]
+  rfl
+
 
 end Lcm
