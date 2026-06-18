@@ -261,10 +261,35 @@ lemma RectangleIntegralHSplit {a x₀ x₁ y₀ y₁ : ℝ}
       RectangleIntegral f (x₀ + y₀ * I) (a + y₁ * I) +
       RectangleIntegral f (a + y₀ * I) (x₁ + y₁ * I) := by
   dsimp [RectangleIntegral, HIntegral, VIntegral]
-  simp only [mul_one, mul_zero, add_zero, zero_add, sub_self]
+  simp only [Complex.mul_re, Complex.mul_im, Complex.ofReal_re, Complex.ofReal_im, Complex.I_re,
+    Complex.I_im, mul_one, mul_zero, add_zero, zero_add, sub_self]
   have h₁ := integral_add_adjacent_intervals f_int_x₀_a_bot f_int_a_x₁_bot
   have h₂ := integral_add_adjacent_intervals f_int_x₀_a_top f_int_a_x₁_top
-  additive_combination - h₁ + h₂
+  have h₁' :
+      (∫ (x : ℝ) in x₀..a, f (↑x + ↑y₀ * I)) +
+          ∫ (x : ℝ) in a..x₁, f (↑y₀ * I + ↑x) =
+        ∫ (x : ℝ) in x₀..x₁, f (↑x + ↑y₀ * I) := by
+    simpa [add_comm] using h₁
+  have h₂' :
+      (∫ (x : ℝ) in x₀..a, f (↑x + ↑y₁ * I)) +
+          ∫ (x : ℝ) in a..x₁, f (↑y₁ * I + ↑x) =
+        ∫ (x : ℝ) in x₀..x₁, f (↑x + ↑y₁ * I) := by
+    simpa [add_comm] using h₂
+  rw [← h₁', ← h₂']
+  have hcomm₁ :
+      ∫ (x : ℝ) in a..x₁, f (↑y₀ * I + ↑x) =
+        ∫ (x : ℝ) in a..x₁, f (↑x + ↑y₀ * I) := by
+    apply intervalIntegral.integral_congr
+    intro x _
+    exact congrArg f (by ring)
+  have hcomm₂ :
+      ∫ (x : ℝ) in a..x₁, f (↑y₁ * I + ↑x) =
+        ∫ (x : ℝ) in a..x₁, f (↑x + ↑y₁ * I) := by
+    apply intervalIntegral.integral_congr
+    intro x _
+    exact congrArg f (by ring)
+  rw [hcomm₁, hcomm₂]
+  abel
 
 lemma RectangleIntegralHSplit' {a x₀ x₁ y₀ y₁ : ℝ}
     (ha : a ∈ [[x₀, x₁]])
@@ -287,7 +312,8 @@ lemma RectangleIntegralVSplit {b x₀ x₁ y₀ y₁ : ℝ}
       RectangleIntegral f (x₀ + y₀ * I) (x₁ + b * I) +
       RectangleIntegral f (x₀ + b * I) (x₁ + y₁ * I) := by
   dsimp [RectangleIntegral, HIntegral, VIntegral]
-  simp only [mul_one, mul_zero, add_zero, zero_add, sub_self]
+  simp only [Complex.mul_re, Complex.mul_im, Complex.ofReal_re, Complex.ofReal_im, Complex.I_re,
+    Complex.I_im, mul_one, mul_zero, add_zero, zero_add, sub_self]
   have h₁ := integral_add_adjacent_intervals f_int_y₀_b_left f_int_b_y₁_left
   have h₂ := integral_add_adjacent_intervals f_int_y₀_b_right f_int_b_y₁_right
   rw [← h₁, ← h₂]
@@ -489,6 +515,7 @@ lemma integral_const_div_sq_add_sq (hy : y ≠ 0) :
     field_simp
     ring
 
+set_option backward.isDefEq.respectTransparency false in
 lemma integral_const_div_self_add_im (hy : y ≠ 0) :
     ∫ x : ℝ in x₁..x₂, A / (x + y * I) =
     A * (Real.log (x₂ ^ 2 + y ^ 2) / 2 - Real.log (x₁ ^ 2 + y ^ 2) / 2) -
@@ -691,7 +718,7 @@ theorem ResidueTheoremOnRectangleWithSimplePole' {f : ℂ → ℂ} {z w p A : �
     apply DifferentiableOn.sub fHolo
     intro s hs
     have : s - p ≠ 0 := sub_ne_zero.mpr hs.2
-    fun_prop (disch := assumption)
+    exact  DifferentiableWithinAt.div (by fun_prop) (by fun_prop) this
   have := BddAbove_on_rectangle_of_bdd_near gHolo.continuousOn near_p
   obtain ⟨h, ⟨hHolo, hEq⟩⟩ := existsDifferentiableOn_of_bddAbove pInRectInterior gHolo this
   exact ResidueTheoremOnRectangleWithSimplePole zRe_le_wRe zIm_le_wIm pInRectInterior hHolo hEq
